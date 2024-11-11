@@ -12,8 +12,12 @@ import './styles/style.scss'
 
 import 'element-plus/theme-chalk/dark/css-vars.css'
 import './styles/dark/css-vars.scss'
-const app = createApp(App)
+import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 
+const app = createApp(App)
+for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+    app.component(key, component)
+}
 app.use(createPinia())
 app.use(router)
 app.use(ElementPlus);

@@ -3,24 +3,7 @@
     <div class="navbar-left">
       <span class="navbar-title">title</span>
     </div>
-    <div class="navbar-center">
-      <ul class="navbar-menu">
-        <li>
-          <router-link to="/about">about</router-link>
-        </li>
-        <li>
-          <router-link to="/analyse">analyse</router-link>
-        </li>
-        <li>
-          <a
-            href="https://bbs.single-cell-spatial.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            >forum
-          </a>
-        </li>
-      </ul>
-    </div>
+    <div class="navbar-center"></div>
     <div class="navbar-right">
       <el-popover
         v-model:visible="popoverVisible"
@@ -51,6 +34,14 @@
       <span class="navbar-button" @click="toggleDarkMode()">
         <Toggle :is-dark-mode="isDarkMode"></Toggle>
       </span>
+      <el-dropdown placement="bottom-end">
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item @click="logout">注销</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+        <img class="avatar" :src="userAvatar" alt="User Avatar" />
+      </el-dropdown>
     </div>
   </nav>
 </template>
@@ -59,7 +50,7 @@
 import { ref } from "vue";
 import { useDark, useToggle } from "@vueuse/core";
 import Toggle from "../components/ToggleDark.vue";
-
+const popoverVisible = ref(false);
 const isDark = useDark();
 const toggleDark = useToggle(isDark);
 const isDarkMode = ref(isDark.value);
@@ -69,8 +60,15 @@ const toggleDarkMode = () => {
   isDarkMode.value = !isDarkMode.value;
 };
 
-// 控制弹出框的显示状态
-const popoverVisible = ref(false);
+const user = JSON.parse(localStorage.getItem("user") || "{}");
+const userAvatar =
+  user.avatar?.replace(/\\/g, "/").replace(/^http:\//, "http://") ||
+  "default-avatar.jpg";
+
+const logout = () => {
+  localStorage.removeItem("user");
+  window.location.reload();
+};
 </script>
 
 <style scoped>
@@ -185,5 +183,16 @@ const popoverVisible = ref(false);
   color: #545454;
   background-color: #b6e8ff; /* 突出显示当前语言 */
   border-radius: 4px;
+}
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.popover-content {
+  display: flex;
+  flex-direction: column;
 }
 </style>

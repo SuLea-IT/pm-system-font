@@ -1,4 +1,4 @@
-// util.js
+// util/localStorage.js
 
 /**
  * 保存数据到localStorage
@@ -22,5 +22,20 @@ export function clearLocalStorageItem(key) {
         localStorage.removeItem(key);
     } catch (error) {
         console.error("Error clearing from localStorage", error);
+    }
+}
+
+/**
+ * 从localStorage获取数据
+ * @param {string} key - 要获取的键名
+ * @returns {any} - 存储的数据，若数据不存在或解析失败则返回null
+ */
+export function getLocalStorageItem(key) {
+    try {
+        const value = localStorage.getItem(key);
+        return value ? JSON.parse(value) : null;
+    } catch (error) {
+        console.error("Error retrieving from localStorage", error);
+        return null;
     }
 }
