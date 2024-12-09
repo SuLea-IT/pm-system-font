@@ -9,6 +9,7 @@ import UsersSys from '../views/Admin/UsersSys.vue';
 import ProjectSys from '../views/Admin/ProjectSys.vue';
 import ProjectList from '../views/Project/ProjectList.vue';
 import ProjectInfo from '../views/Project/ProjectInfo.vue';
+import TasksList from '../views/Tasks/TasksList.vue';
 const routes = [
   {
     path: '/',
@@ -61,6 +62,16 @@ const routes = [
         name: '项目信息',
         props: true,
       },
+    ],
+  }, {
+    path: '/task',
+    component: MainLayout,
+    children: [
+      {
+        path: '', // 默认子路由
+        component: TasksList,
+        name: '任务列表',
+      }
     ],
   },
 ];

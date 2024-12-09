@@ -1,73 +1,108 @@
 <template>
   <div class="projects-sys">
-    <!-- 搜索框 -->
-    <el-input
-      v-model="searchName"
-      placeholder="请输入项目名称搜索"
-      clearable
-      style="width: 300px; margin-bottom: 20px"
-    >
-      <template #append>
-        <el-button @click="searchProjects" type="primary">搜索</el-button>
-      </template>
-    </el-input>
-
-    <!-- 新建项目按钮 -->
-    <el-button
-      type="primary"
-      @click="openCreateProjectDialog"
-      style="margin-bottom: 20px"
-    >
-      新建项目
-    </el-button>
-
-    <!-- 使用el-card展示项目信息 -->
-    <el-row :gutter="20">
-      <el-col :span="6" v-for="project in projects" :key="project.id">
+    <!-- 顶部搜索和新建区域 -->
+    <div class="header-actions">
+      <el-input
+        v-model="searchName"
+        placeholder="请输入项目名称搜索"
+        clearable
+        class="search-input"
+      >
+        <template #prefix>
+          <el-icon><Search /></el-icon>
+        </template>
+        <template #append>
+          <el-button @click="searchProjects" type="primary">搜索</el-button>
+        </template>
+      </el-input>
+      <el-button
+        type="primary"
+        @click="openCreateProjectDialog"
+        class="create-btn"
+      >
+        <el-icon><Plus /></el-icon>新建项目
+      </el-button>
+    </div>
+    <!-- 项目卡片列表 -->
+    <el-row :gutter="24">
+      <el-col
+        :xs="24"
+        :sm="12"
+        :md="8"
+        :lg="6"
+        v-for="project in projects"
+        :key="project.id"
+      >
         <el-card class="project-card" shadow="hover">
           <div
-            class="project-content"
-            :style="{ backgroundImage: `url(${project.avatar})` }"
+            class="project-cover"
+            :style="{
+              backgroundImage: `url(${
+                project.avatar || '/default-project-bg.jpg'
+              })`,
+            }"
           >
-            <!-- 项目名称带高亮效果 -->
-            <h3 v-html="highlightText(project.name, searchName)"></h3>
-            <p>描述: {{ truncateDescription(project.description) }}</p>
-            <p>创建人: {{ truncateDescription(project.created_by_name) }}</p>
+            <div class="project-info">
+              <h3
+                class="project-title"
+                v-html="highlightText(project.name, searchName)"
+              ></h3>
+              <p class="project-desc">
+                {{ truncateDescription(project.description) }}
+              </p>
+              <div class="project-creator">
+                <el-avatar :size="24" :src="project.creator_avatar">
+                  {{ project.created_by_name?.charAt(0) }}
+                </el-avatar>
+                <span>{{ project.created_by_name }}</span>
+              </div>
+            </div>
           </div>
           <div class="card-actions">
-            <el-button
-              @click="editProject(project)"
-              type="primary"
-              size="small"
-            >
-              编辑
-            </el-button>
-            <el-button
-              @click="deleteProject(project)"
-              type="danger"
-              size="small"
-            >
-              删除
-            </el-button>
-            <el-button
-              @click="handleEnterProject(project.id)"
-              type="success"
-              size="small"
-            >
-              进入项目
-            </el-button>
+            <el-tooltip content="编辑项目" placement="top">
+              <el-button
+                @click="editProject(project)"
+                type="primary"
+                plain
+                circle
+              >
+                <el-icon><Edit /></el-icon>
+              </el-button>
+            </el-tooltip>
+            <el-tooltip content="删除项目" placement="top">
+              <el-button
+                @click="deleteProject(project)"
+                type="danger"
+                plain
+                circle
+              >
+                <el-icon><Delete /></el-icon>
+              </el-button>
+            </el-tooltip>
+            <el-tooltip content="进入项目" placement="top">
+              <el-button
+                @click="handleEnterProject(project.id)"
+                type="success"
+                plain
+              >
+                进入项目
+              </el-button>
+            </el-tooltip>
           </div>
         </el-card>
       </el-col>
     </el-row>
-
-    <el-pagination
-      layout="prev, pager, next, total"
-      :total="total"
-      :page-size="pageSize"
-      v-model:currentPage="currentPage"
-      @current-change="fetchProjects"
-    />
+    <!-- 分页器 -->
+    <div class="pagination-container">
+      <el-pagination
+        background
+        layout="prev, pager, next, total"
+        :total="total"
+        :page-size="pageSize"
+        v-model:currentPage="currentPage"
+        @current-change="fetchProjects"
+      />
+    </div>
 
     <!-- 编辑项目的弹窗 -->
     <el-dialog v-model="isDialogVisible" title="编辑项目信息" width="20%">
@@ -259,29 +294,132 @@ onMounted(fetchProjects);
 
 <style scoped lang="scss">
 .projects-sys {
-  width: 100%;
+  padding: 24px;
+  background-color: #f5f7fa;
+  // min-width: 100%;
+}
+.header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+
+  .search-input {
+    width: 320px;
+    transition: all 0.3s;
+
+    &:focus-within {
+      width: 360px;
+    }
+  }
+
+  .create-btn {
+    .el-icon {
+      margin-right: 4px;
+    }
+  }
 }
 .project-card {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  transition: all 0.3s;
+  border: none;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
 }
-.project-content {
-  padding: 10px;
-  height: 140px;
+.project-cover {
+  height: 180px;
   background-size: cover;
   background-position: center;
-  border-radius: 5px;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0) 0%,
+      rgba(0, 0, 0, 0.7) 100%
+    );
+  }
+}
+.project-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
   color: #fff;
-  box-sizing: border-box;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+.project-title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+
+  .highlight {
+    color: #ffd700;
+    text-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+  }
+}
+.project-desc {
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.project-creator {
+  display: flex;
+  align-items: center;
+  margin-top: 12px;
+  gap: 8px;
+
+  .el-avatar {
+    border: 2px solid rgba(255, 255, 255, 0.8);
+  }
+
+  span {
+    font-size: 14px;
+  }
 }
 .card-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  margin-top: 15px;
+  gap: 12px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 0 0 8px 8px;
 }
-.highlight {
-  color: #ffd700;
-  font-size: 15px;
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 32px;
+  padding: 16px 0;
+}
+// 响应式适配
+@media screen and (max-width: 768px) {
+  .header-actions {
+    flex-direction: column;
+    gap: 16px;
+
+    .search-input {
+      width: 100%;
+    }
+
+    .create-btn {
+      width: 100%;
+    }
+  }
 }
 </style>

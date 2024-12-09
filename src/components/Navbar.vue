@@ -37,12 +37,19 @@
       <el-dropdown placement="bottom-end">
         <template #dropdown>
           <el-dropdown-menu>
+            <el-dropdown-item @click="showUserProfile"
+              >个人信息</el-dropdown-item
+            >
             <el-dropdown-item @click="logout">注销</el-dropdown-item>
           </el-dropdown-menu>
         </template>
         <img class="avatar" :src="userAvatar" alt="User Avatar" />
       </el-dropdown>
     </div>
+    <UserProfileDialog
+      v-model:visible="dialogVisible"
+      :userProfile="userInfo"
+    />
   </nav>
 </template>
 
@@ -50,6 +57,8 @@
 import { ref } from "vue";
 import { useDark, useToggle } from "@vueuse/core";
 import Toggle from "../components/ToggleDark.vue";
+import { getUserProfile } from "../services/users"; // 引入获取用户信息的 API 方法
+import UserProfileDialog from "@/components/UserProfileDialog.vue";
 const popoverVisible = ref(false);
 const isDark = useDark();
 const toggleDark = useToggle(isDark);
@@ -65,11 +74,28 @@ const userAvatar =
   user.avatar?.replace(/\\/g, "/").replace(/^http:\//, "http://") ||
   "default-avatar.jpg";
 
+// 用户信息对话框的显示状态
+const dialogVisible = ref(false);
+const userInfo = ref({}); // 存储用户信息
+
+// 获取用户个人信息并展示
+const showUserProfile = async () => {
+  try {
+    const response = await getUserProfile();
+    userInfo.value = response.data.user; // 假设返回的数据结构为 { data: { ...userInfo } }
+    console.log(response.data.user);
+    dialogVisible.value = true;
+  } catch (error) {
+    console.error("获取用户信息失败:", error);
+  }
+};
+
 const logout = () => {
   localStorage.removeItem("user");
   window.location.reload();
 };
 </script>
+
 
 <style scoped>
 .navbar {

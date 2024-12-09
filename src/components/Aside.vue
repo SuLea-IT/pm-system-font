@@ -4,16 +4,37 @@
       :default-active="activeMenu"
       class="el-menu-vertical-demo"
       @select="handleSelect"
+      :collapse-transition="false"
+      background-color="#304156"
+      text-color="#bfcbd9"
+      active-text-color="#ffffff"
     >
-      <!-- 动态生成菜单项 -->
-      <el-menu-item index="1">{{ routeNames["1"] }}</el-menu-item>
-      <el-menu-item index="2">{{ routeNames["2"] }}</el-menu-item>
-
-      <!-- 系统管理带有子菜单 -->
-      <el-sub-menu index="3">
-        <template #title>{{ routeNames["3"] }}</template>
-        <el-menu-item index="3-1">{{ routeNames["3-1"] }}</el-menu-item>
-        <el-menu-item index="3-2">{{ routeNames["3-2"] }}</el-menu-item>
+      <el-menu-item index="1">
+        <el-icon><UserFilled /></el-icon>
+        <span>{{ routeNames["1"] }}</span>
+      </el-menu-item>
+      <el-menu-item index="2">
+        <el-icon><Document /></el-icon>
+        <span>{{ routeNames["2"] }}</span>
+      </el-menu-item>
+      <!-- 添加任务列表菜单项 -->
+      <el-menu-item index="4">
+        <el-icon><List /></el-icon>
+        <span>{{ routeNames["4"] }}</span>
+      </el-menu-item>
+      <el-sub-menu v-if="isAdmin" index="3">
+        <template #title>
+          <el-icon><Setting /></el-icon>
+          <span>{{ routeNames["3"] }}</span>
+        </template>
+        <el-menu-item index="3-1">
+          <el-icon><User /></el-icon>
+          <span>{{ routeNames["3-1"] }}</span>
+        </el-menu-item>
+        <el-menu-item index="3-2">
+          <el-icon><Folder /></el-icon>
+          <span>{{ routeNames["3-2"] }}</span>
+        </el-menu-item>
       </el-sub-menu>
     </el-menu>
   </el-aside>
@@ -27,20 +48,27 @@ const router = useRouter();
 const route = useRoute();
 const activeMenu = ref("1");
 
+// 获取本地存储中的角色（假设角色保存在 localStorage 中）
+const role = localStorage.getItem("role"); // 角色，假设 '0' 是管理员，'1' 是普通用户
+
+// 判断当前用户是否为管理员
+const isAdmin = ref(role === "0");
+
 // 将菜单项的索引与路径映射
 const menuRoutes = {
   1: "/login",
   2: "/project",
-  "3-1": "/sys", // 用户管理路径
-  "3-2": "/sys/projectSys", // 确保路径正确
+  4: "/task", // 添加任务列表路由
+  "3-1": "/sys",
+  "3-2": "/sys/projectSys",
 };
-
-// 路径与菜单索引的映射（反向映射）
+// 更新反向映射
 const pathToIndex = {
   "/login": "1",
   "/project": "2",
-  "/sys": "3-1", // 用户管理路径
-  "/sys/projectSys": "3-2", // 项目管理路径（改为完整路径）
+  "/task": "4", // 添加任务列表映射
+  "/sys": "3-1",
+  "/sys/projectSys": "3-2",
 };
 
 // 路由名称映射（用于动态渲染菜单项文本）
@@ -48,16 +76,22 @@ const routeNames = {
   1: "登录",
   2: "项目",
   3: "系统管理",
+  4: "任务列表", // 添加任务列表名称
   "3-1": "用户管理",
   "3-2": "项目管理",
 };
 
-// 设置 activeMenu 初始值
+// 修改 setActiveMenu 方法来处理任务列表路由
 const setActiveMenu = () => {
   const currentPath = route.path;
-  activeMenu.value = pathToIndex[currentPath] || "1"; // 如果路径没有匹配，默认高亮首页
+  if (currentPath.startsWith("/project/")) {
+    activeMenu.value = "2";
+  } else if (currentPath.startsWith("/task")) {
+    activeMenu.value = "4";
+  } else {
+    activeMenu.value = pathToIndex[currentPath] || "1";
+  }
 };
-
 onMounted(() => {
   setActiveMenu();
 });
@@ -83,30 +117,67 @@ const handleSelect = (index) => {
 .aside {
   background-color: #304156;
   height: calc(100vh - 74px);
+  transition: width 0.3s;
+  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
 }
-
 .el-menu {
-  .el-sub-menu {
-    background: #304156;
-    ::v-deep .el-sub-menu__title {
-      color: #fff !important;
-    }
-  }
+  border-right: none;
 
-  ::v-deep .is-active {
-    background: #5d89c3 !important;
-  }
-  .el-menu-item {
-    background: #304156;
-    color: #fff;
-  }
-  .el-menu-vertical-demo {
-    background-color: #304156;
-    border-right: none;
-    .el-menu-item {
-      background: #000;
-      color: #fff;
+  :deep(.el-menu-item) {
+    height: 56px;
+    line-height: 56px;
+    padding: 0 20px !important;
+
+    &:hover {
+      background-color: #263445 !important;
+    }
+
+    &.is-active {
+      background-color: #1890ff !important;
+
+      &::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: #ffffff;
+      }
     }
   }
+  :deep(.el-sub-menu) {
+    .el-sub-menu__title {
+      height: 56px;
+      line-height: 56px;
+      padding: 0 20px !important;
+      color: #bfcbd9;
+
+      &:hover {
+        background-color: #263445 !important;
+      }
+    }
+
+    .el-menu-item {
+      background: #1f2d3d;
+      padding-left: 40px !important;
+
+      &:hover {
+        background-color: #001528 !important;
+      }
+    }
+  }
+}
+// 图标样式
+.el-icon {
+  vertical-align: middle;
+  margin-right: 10px;
+  width: 24px;
+  text-align: center;
+}
+// 文字样式
+span {
+  vertical-align: middle;
+  font-size: 14px;
 }
 </style>

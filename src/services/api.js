@@ -13,11 +13,12 @@ const apiClient = axios.create({
     // baseURL: 'http://192.168.110.2:3177', // 配置基础 URL
     baseURL: 'http://localhost:3177', // 配置基础 URL
 
-    timeout: 1000,
+    timeout: 1000, // 默认超时为1000ms
     headers: {
         'Content-Type': 'application/json',
     },
 });
+
 // 请求拦截器
 apiClient.interceptors.request.use(config => {
     // 检查当前请求的 URL 是否在白名单内
@@ -31,6 +32,11 @@ apiClient.interceptors.request.use(config => {
         }
     }
 
+    // 为 /files/batch-upload 接口单独配置不限制超时
+    if (config.url.includes('/api/directories/files/batch-upload')) {
+        config.timeout = 0; // 设置为 0 表示不限制超时
+    }
+
     return config;
 }, error => {
     return Promise.reject(error);
@@ -42,6 +48,5 @@ apiClient.interceptors.response.use(response => {
 }, error => {
     return Promise.reject(error);
 });
-
 
 export default apiClient;

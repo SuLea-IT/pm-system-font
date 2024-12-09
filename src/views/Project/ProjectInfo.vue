@@ -1,91 +1,112 @@
 <template>
   <div class="project-info">
     <div class="project-container">
-      <!-- 左侧：项目成员 -->
+      <!-- 左侧栏 -->
       <div class="left-section">
-        <DirectoryTree :projectId="projectId" />
+        <div class="action-buttons">
+          <UploadFile
+            :projectId="projectId"
+            :userId="project.created_by"
+            @refreshTree="refreshDirectoryTree"
+            class="upload-btn"
+          />
+          <CreateTask
+            :projectId="projectId"
+            @task-created="handleTaskCreated"
+          />
+        </div>
+        <DirectoryTree
+          ref="directoryTreeRef"
+          :projectId="projectId"
+          class="directory-tree"
+        />
       </div>
-
-      <!-- 右侧：项目基本信息 -->
+      <!-- 右侧栏 -->
       <div class="right-section">
-        <el-descriptions class="margin-top" title="项目信息" :column="3" border>
-          <template #extra>
-            <el-button type="primary" @click="editProject">编辑项目</el-button>
-            <!-- 邀请成员按钮 -->
-            <el-button type="success" @click="showInviteDialog"
-              >邀请成员</el-button
-            >
-          </template>
+        <!-- 项目基本信息 -->
+        <el-card class="info-card">
+          <el-descriptions title="项目信息" :column="3" border>
+            <template #extra>
+              <div class="action-group">
+                <el-button type="primary" @click="editProject">
+                  <el-icon><Edit /></el-icon>
+                  编辑项目
+                </el-button>
+                <el-button type="success" @click="showInviteDialog">
+                  邀请成员
+                </el-button>
+              </div>
+            </template>
+            <el-descriptions-item label="项目名称">
+              <span class="project-name">{{ project.name }}</span>
+            </el-descriptions-item>
+            <el-descriptions-item label="创建人">
+              <el-tag
+                class="creator-tag"
+                @click="showUserProfile(project.created_by)"
+              >
+                {{ project.created_by_name }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="创建时间">
+              <span class="creation-time">{{
+                formatDate(project.created_at)
+              }}</span>
+            </el-descriptions-item>
+            <el-descriptions-item label="描述" :span="3">
+              <span class="project-desc">{{ project.description }}</span>
+            </el-descriptions-item>
+          </el-descriptions>
+        </el-card>
+        <!-- 项目状态 -->
+        <ProjectStatus :projectStats="projectStats" class="status-section" />
+        <!-- 成员列表 -->
+        <div
+          v-if="projectMember && projectMember.length"
+          class="members-section"
+        >
+          <div class="section-header">
+            <h3>项目成员</h3>
+            <el-button type="primary" plain @click="showInviteDialog">
+              <el-icon><Plus /></el-icon>
+              添加成员
+            </el-button>
+          </div>
 
-          <!-- 项目名称 -->
-          <el-descriptions-item label="项目名称">
-            {{ project.name }}
-          </el-descriptions-item>
-
-          <!-- 创建人 -->
-          <el-descriptions-item label="创建人">
-            <el-tag @click="showUserProfile(project.created_by)">
-              {{ project.created_by_name }}
-            </el-tag>
-          </el-descriptions-item>
-
-          <!-- 创建时间 -->
-          <el-descriptions-item label="创建时间">
-            {{ formatDate(project.created_at) }}
-          </el-descriptions-item>
-
-          <!-- 项目描述 -->
-          <el-descriptions-item label="描述">
-            {{ project.description }}
-          </el-descriptions-item>
-        </el-descriptions>
-
-        <!-- 项目完成状态 -->
-        <el-descriptions class="margin-top" title="项目状态" :column="3" border>
-          <el-descriptions-item label="单基因投影">
-            <el-tag
-              :type="
-                projectStats.single_gene_projection === 1 ? 'success' : 'info'
-              "
-            >
-              {{ "单基因投影" }}
-            </el-tag>
-          </el-descriptions-item>
-
-          <el-descriptions-item label="基因集投影">
-            <el-tag
-              :type="
-                projectStats.gene_set_projection === 1 ? 'success' : 'info'
-              "
-            >
-              {{ projectStats.gene_set_projection === 1 ? "已完成" : "未开始" }}
-            </el-tag>
-          </el-descriptions-item>
-
-          <el-descriptions-item label="聚类">
-            <el-tag :type="projectStats.clustering === 1 ? 'success' : 'info'">
-              {{ projectStats.clustering === 1 ? "已完成" : "未开始" }}
-            </el-tag>
-          </el-descriptions-item>
-        </el-descriptions>
-
-        <div v-if="projectMember && projectMember.length" class="members">
-          <h3>项目成员</h3>
-          <el-table :data="projectMember" border>
+          <el-table
+            :data="projectMember"
+            border
+            class="member-table"
+            :header-cell-style="{ background: '#f5f7fa' }"
+          >
             <el-table-column prop="name" label="姓名" />
             <el-table-column prop="username" label="用户名" />
             <el-table-column prop="email" label="邮箱" />
-            <el-table-column prop="role" label="角色" />
-
-            <!-- 操作列 -->
-            <el-table-column label="操作" width="180px">
+            <el-table-column prop="role" label="角色">
               <template #default="{ row }">
-                <el-button @click="removeMember(row)" type="danger" size="small"
-                  >移除</el-button
-                >
-                <el-button @click="manageMember(row)" type="info" size="small"
-                  >管理</el-button
-                >
+                <el-tag :type="row.role === 'admin' ? 'danger' : 'info'">
+                  {{ row.role }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="180">
+              <template #default="{ row }">
+                <el-button-group>
+                  <el-button
+                    @click="manageMember(row)"
+                    type="primary"
+                    size="small"
+                  >
+                    管理
+                  </el-button>
+                  <el-button
+                    @click="removeMember(row)"
+                    type="danger"
+                    size="small"
+                  >
+                    移除
+                  </el-button>
+                </el-button-group>
               </template>
             </el-table-column>
           </el-table>
@@ -110,87 +131,124 @@
     </el-dialog>
 
     <!-- 用户资料弹窗 -->
-    <el-dialog v-model="isUserDialogVisible" title="用户资料" width="40%">
-      <el-descriptions title="用户信息" border>
-        <el-descriptions-item label="头像" :width="120" align="center">
-          <el-image
-            style="width: 80px; height: 80px; border-radius: 50%"
-            :src="userProfile.avatar"
-          />
-        </el-descriptions-item>
-        <el-descriptions-item label="用户名">
-          {{ userProfile.username }}
-        </el-descriptions-item>
-        <el-descriptions-item label="姓名">
-          {{ userProfile.name }}
-        </el-descriptions-item>
-        <el-descriptions-item label="邮箱">
-          {{ userProfile.email }}
-        </el-descriptions-item>
-        <el-descriptions-item label="角色">
-          <el-tag :type="userProfile.role === 0 ? 'danger' : 'info'">
-            {{ userProfile.role === 0 ? "管理员" : "用户" }}
-          </el-tag>
-        </el-descriptions-item>
-      </el-descriptions>
-
-      <template #footer>
-        <el-button @click="isUserDialogVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
-    <!-- 邀请成员的弹窗 -->
-    <el-dialog v-model="isInviteDialogVisible" title="邀请成员" width="26%">
-      <el-input
-        v-model="searchQuery"
-        placeholder="搜索用户"
-        suffix-icon="el-icon-search"
-      >
-        <template #append>
-          <el-button @click="searchUsers">搜索</el-button>
-        </template></el-input
-      >
-
+    <UserProfileDialog
+      v-model:visible="isUserDialogVisible"
+      :userProfile="userProfile"
+    />
+    <el-dialog
+      v-model="isInviteDialogVisible"
+      title="邀请成员"
+      width="560px"
+      class="invite-dialog"
+    >
+      <!-- 搜索框 -->
+      <div class="search-section">
+        <el-input
+          v-model="searchQuery"
+          placeholder="输入姓名或邮箱搜索用户"
+          class="search-input"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+          <template #append>
+            <el-button type="primary" @click="searchUsers">
+              <el-icon><Search /></el-icon>
+              搜索
+            </el-button>
+          </template>
+        </el-input>
+      </div>
+      <!-- 用户列表 -->
       <el-table
         :data="filteredUsers"
         border
-        style="margin-top: 20px; max-height: 300px; overflow-y: auto"
+        class="users-table"
+        :max-height="300"
+        highlight-current-row
       >
-        <el-table-column prop="name" label="姓名" />
-        <el-table-column prop="email" label="邮箱" />
-        <el-table-column label="操作" width="120px">
+        <el-table-column prop="name" label="姓名" min-width="120">
+          <template #default="{ row }">
+            <div class="user-info">
+              <el-avatar :size="32" :src="row.avatar">{{
+                row.name.charAt(0)
+              }}</el-avatar>
+              <span class="user-name">{{ row.name }}</span>
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="email" label="邮箱" min-width="200" />
+
+        <el-table-column label="操作" width="120" align="center">
           <template #default="{ row }">
             <el-button
               @click="toggleUserSelection(row)"
               :type="isUserSelected(row) ? 'success' : 'primary'"
               size="small"
+              class="select-btn"
             >
+              <el-icon v-if="isUserSelected(row)"><Check /></el-icon>
               {{ isUserSelected(row) ? "已选择" : "选择" }}
             </el-button>
           </template>
         </el-table-column>
       </el-table>
-
-      <!-- 选择的用户 -->
-      <el-descriptions
-        v-if="selectedUsers.length"
-        title="已选择的成员"
-        border
-        :column="1"
-        style="width: 300px"
-      >
-        <template v-for="user in selectedUsers" :key="user.id">
-          <el-descriptions-item label="姓名" width="100">
-            {{ user.name }}
-          </el-descriptions-item>
-          <el-descriptions-item label="邮箱" width="200">
-            {{ user.email }}
-          </el-descriptions-item>
-        </template>
-      </el-descriptions>
-
+      <!-- 已选成员 -->
+      <div v-if="selectedUsers.length" class="selected-users-section">
+        <div class="section-header">
+          <div class="section-title">
+            <el-icon class="title-icon"><User /></el-icon>
+            <span>已选择的成员</span>
+            <el-tag type="info" class="member-count" round>
+              {{ selectedUsers.length }}
+            </el-tag>
+          </div>
+          <el-button
+            type="text"
+            size="small"
+            @click="clearSelectedUsers"
+            class="clear-btn"
+          >
+            <el-icon><Delete /></el-icon>
+            清空选择
+          </el-button>
+        </div>
+        <el-scrollbar max-height="150px" class="members-scrollbar">
+          <el-space wrap size="large">
+            <el-tag
+              v-for="user in selectedUsers"
+              :key="user.id"
+              class="selected-user-tag"
+              closable
+              @close="toggleUserSelection(user)"
+              effect="light"
+            >
+              <div class="tag-wrapper">
+                <el-avatar :size="28" :src="user.avatar" class="user-avatar">
+                  {{ user.name.charAt(0) }}
+                </el-avatar>
+                <div class="tag-content">
+                  <span class="tag-name">{{ user.name }}</span>
+                  <span class="tag-email">{{ user.email }}</span>
+                </div>
+              </div>
+            </el-tag>
+          </el-space>
+        </el-scrollbar>
+      </div>
       <template #footer>
-        <el-button @click="isInviteDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="inviteMember">邀请</el-button>
+        <div class="dialog-footer">
+          <el-button @click="isInviteDialogVisible = false">取消</el-button>
+          <el-button
+            type="primary"
+            @click="inviteMember"
+            :disabled="!selectedUsers.length"
+          >
+            <el-icon><Plus /></el-icon>
+            邀请成员
+          </el-button>
+        </div>
       </template>
     </el-dialog>
     <!-- 管理成员的弹窗 -->
@@ -215,6 +273,59 @@
         <el-button type="primary" @click="updateMember">保存</el-button>
       </template>
     </el-dialog>
+    <!-- 上传文件弹窗 -->
+    <el-dialog v-model="uploadDialogVisible" title="上传文件" width="30%">
+      <el-form :model="uploadForm" label-width="80px">
+        <!-- 目录选择 -->
+        <el-form-item label="选择目录" required>
+          <el-tree
+            ref="directoryTreeRef"
+            :data="directoryTree"
+            node-key="id"
+            :props="{ label: 'name' }"
+            @node-click="handleDirectorySelect"
+            default-expand-all
+          />
+        </el-form-item>
+
+        <!-- 文件上传 -->
+        <el-form-item label="文件" required>
+          <el-upload
+            ref="uploadRef"
+            :action="uploadUrl"
+            :headers="uploadHeaders"
+            :data="uploadData"
+            :disabled="!selectedDirectory"
+            :auto-upload="false"
+            multiple
+          >
+            <el-button :disabled="!selectedDirectory" type="primary">
+              选择文件
+            </el-button>
+            <template #tip>
+              <div class="el-upload__tip">
+                {{
+                  selectedDirectory
+                    ? "已选择目录: " + selectedDirectoryName
+                    : "请先选择目录"
+                }}
+              </div>
+            </template>
+          </el-upload>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="uploadDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          @click="handleUpload"
+          :disabled="!selectedDirectory"
+        >
+          上传
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -222,7 +333,10 @@
 import { ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
+import UserProfileDialog from "@/components/UserProfileDialog.vue";
 import DirectoryTree from "@/components/ProjectTree.vue";
+import ProjectStatus from "@/components/ProjectStatus.vue";
+import CreateTask from "@/components/CreateTask.vue";
 
 import {
   getProjectInfo,
@@ -230,12 +344,15 @@ import {
   removeProjectMember,
   inviteProjectMember,
 } from "@/services/project";
+import UploadFile from "@/components/UploadFile.vue";
+
 import {
   getUserIDProfile,
   getExcludeSelf,
   getUsersBySearch,
 } from "@/services/users";
 import { formatDate } from "@/util/day";
+const directoryTreeRef = ref(null);
 const selectedUsers = ref([]);
 const route = useRoute();
 const router = useRouter();
@@ -246,12 +363,18 @@ const project = ref({
   created_by_name: "", // 创建人名字
   created_at: "",
 });
+const uploadDialogVisible = ref(false);
 const projectMember = ref([]);
 const projectStats = ref({
   single_gene_projection: 0,
   gene_set_projection: 0,
   clustering: 0,
 });
+const refreshDirectoryTree = () => {
+  console.log(1111);
+  directoryTreeRef.value?.fetchTreeData();
+};
+const directoryId = ref(22);
 const isDialogVisible = ref(false); // 控制编辑对话框的显示
 const editData = ref({}); // 存储编辑后的数据
 const filteredUsers = ref([]);
@@ -272,7 +395,10 @@ const userProfile = ref({
   avatar: "", // 用户头像
   address: "", // 用户地址
 });
-
+// 处理任务创建成功的回调
+const handleTaskCreated = () => {
+  // 可以刷新任务列表或做其他操作
+};
 // 获取项目 ID
 const projectId = Number(route.params.id);
 
@@ -444,51 +570,262 @@ onMounted(fetchProjectInfo);
 
 <style scoped lang="scss">
 .project-info {
-  width: 100%;
-  //   padding: 20px;
+  padding: 24px;
+  background: #f5f7fa;
+  // min-height: 100vh;
+  // min-width: 100%;
 }
-
 .project-container {
   display: flex;
-  justify-content: space-between;
-  gap: 20px; /* 控制左右间距 */
+  gap: 24px;
+  // height: calc(100vh - 48px);
 }
-
 .left-section {
-  width: 20%;
-  flex: 2;
-  padding: 20px;
-}
-
-.right-section {
-  width: 80%;
-  flex: 3;
-  background-color: #6289ff; /* 深色背景 */
-  color: white; /* 文字颜色设置为白色 */
-  padding: 10px;
-  box-sizing: border-box;
-  border-radius: 8px; /* 圆角效果 */
-}
-
-.card-actions {
+  width: 300px;
   display: flex;
-  gap: 10px;
-  margin-top: 20px;
+  flex-direction: column;
+  gap: 16px;
+  .action-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    .upload-btn,
+    .create-task-btn {
+      width: 100%;
+      height: 40px;
+    }
+  }
+  .directory-tree {
+    flex: 1;
+    background: white;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+  }
 }
-
-.members {
-  margin-top: 20px;
+.right-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  overflow-y: auto;
+  padding-right: 8px;
+  .info-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+  }
+  .project-name {
+    font-weight: 500;
+    color: #2c3e50;
+  }
+  .creator-tag {
+    cursor: pointer;
+    transition: all 0.3s;
+    &:hover {
+      transform: translateY(-2px);
+    }
+  }
+  .project-desc {
+    color: #606266;
+    line-height: 1.5;
+  }
+  .status-section {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+  }
+  .members-section {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      h3 {
+        margin: 0;
+        color: #2c3e50;
+      }
+    }
+    .member-table {
+      :deep(.el-table__header) {
+        font-weight: 500;
+      }
+    }
+  }
 }
-
-.el-table {
-  margin-top: 10px;
+.action-group {
+  display: flex;
+  gap: 8px;
 }
-
-.el-descriptions-item {
-  padding: 10px 0;
+// 自定义滚动条样式
+::-webkit-scrollbar {
+  width: 6px;
 }
-
-.el-button {
-  margin-right: 10px;
+::-webkit-scrollbar-thumb {
+  background: #dcdfe6;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-track {
+  background: #f5f7fa;
+}
+.invite-dialog {
+  --el-dialog-padding-primary: 24px;
+}
+.search-section {
+  margin-bottom: 20px;
+}
+.search-input :deep(.el-input__wrapper) {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+.users-table {
+  margin-bottom: 20px;
+  border-radius: 4px;
+}
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.user-name {
+  font-weight: 500;
+}
+.select-btn {
+  padding: 6px 16px;
+}
+.selected-users-section {
+  margin-top: 24px;
+  padding: 16px;
+  background-color: var(--el-fill-color-lighter);
+  border-radius: 4px;
+}
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+.selected-user-tag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  margin: 4px;
+}
+.tag-content {
+  display: flex;
+  flex-direction: column;
+  margin-left: 8px;
+}
+.tag-name {
+  font-weight: 500;
+}
+.tag-email {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 20px;
+}
+.selected-users-section {
+  margin: 24px 0;
+  padding: 16px;
+  background-color: var(--el-fill-color-lighter);
+  border-radius: 8px;
+  border: 1px solid var(--el-border-color-light);
+}
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+.title-icon {
+  font-size: 18px;
+  color: var(--el-color-primary);
+}
+.member-count {
+  margin-left: 8px;
+  font-size: 12px;
+  padding: 2px 10px;
+}
+.clear-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--el-text-color-secondary);
+  transition: color 0.3s;
+}
+.clear-btn:hover {
+  color: var(--el-color-danger);
+}
+.members-scrollbar {
+  padding: 4px;
+}
+.selected-user-tag {
+  margin: 4px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: all 0.3s;
+}
+.selected-user-tag:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+.tag-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.user-avatar {
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+.tag-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tag-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--el-text-color-primary);
+}
+.tag-email {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+.close-icon {
+  margin-left: 4px;
+  font-size: 14px;
+  opacity: 0.6;
+  transition: opacity 0.3s;
+}
+.close-icon:hover {
+  opacity: 1;
+}
+:deep(.el-tag .el-tag__close) {
+  color: var(--el-text-color-secondary);
+  right: 8px;
+}
+:deep(.el-scrollbar__wrap) {
+  padding-bottom: 8px;
 }
 </style>

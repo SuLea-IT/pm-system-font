@@ -204,7 +204,7 @@ const goToRegister = () => {
 onMounted(() => {
   const user = getLocalStorageItem("user");
   if (user) {
-    router.push("/sys");
+    router.push("/project");
     return; // 跳转后不继续执行后续代码
   }
 
@@ -290,7 +290,7 @@ const throttledOnSubmit = throttle(async () => {
         type: "success",
         duration: 3000,
       });
-      router.push("/sys");
+      router.push("/project");
 
       // 如果选中“记住密码”，保存用户名和密码
       if (form.value.remember) {
